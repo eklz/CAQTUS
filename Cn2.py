@@ -5,10 +5,12 @@ import pandas as pd
 from collections import namedtuple
 from tqdm import tqdm
 import warnings
+from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 from .Dewan import *
 from .Maths import *
 from .Masciadri import *
+from .decimation import *
 
 
 
@@ -67,8 +69,29 @@ class Cn2:
             return Cn2(copy, **self.columns._asdict())
 
 
-    def decimate(self, l):
-        return Cn2(self._data.iloc[l].reset_index(drop=True), **self.columns._asdict())
+    def decimate(self, nbsegments, nbpoints_per_segment):
+        
+        if nbsegments >1 : 
+            def foo(x):
+                try : 
+                    roots, res = interp_gauss_legendre_pp(nbpoints_per_segment, np.array_split(x[self.columns.alt].values, nbsegments), np.array_split(x[self.columns.Cn2].values, nbsegments))
+                    f = interp1d(x.alt.values, x.wspeed.values)
+                    return pd.DataFrame(np.transpose([roots, res, f(roots)]), columns=[self.columns.alt, self.columns.Cn2, self.columns.wspeed])
+                except : 
+                    print(f'Error for {x}')
+        else :
+            def foo(x):
+                try : 
+                    roots, res =interp_gauss_legendre(nbpoints_per_segment, x[self.columns.alt].values, x[self.columns.Cn2].values, norm=True)
+                    f = interp1d(x.alt.values, x.wspeed.values)
+                    return pd.DataFrame(np.transpose([roots, res, f(roots)]), columns=[self.columns.alt, self.columns.Cn2, self.columns.wspeed])
+                except : 
+                    print(f'Error for {x}')
+                           
+        df = self._data.groupby(self.columns.date).progress_apply(lambda x : foo(x))
+        df = df.reset_index()
+        df = df.drop(columns=['level_1'])
+        return Cn2(df,date="date", alt="alt", Cn2="Cn2", wspeed="wspeed")
 
     def moments(self, lambda_m = 1.55e-6, zenithAngle = 0):
         f = (lambda x : calc_moments(x[self.columns.Cn2].values, x[self.columns.alt].values, x[self.columns.wspeed].values,

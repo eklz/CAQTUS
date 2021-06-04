@@ -6,3 +6,4 @@ from .Masciadri import *
 from .WSPT import *
 from .HAP import *
 from .perfo import *
+from .decimation import *

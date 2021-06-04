@@ -2,12 +2,12 @@
 from astropy.io import fits
 
 from .Cn2 import *
-
 from numpy import *
 from tqdm import tqdm
 import pandas as pd
 from multiprocessing import Pool
 import os
+import shutil
 from os import truncate, remove
 from shutil import copyfile
 from time import time, time_ns
@@ -49,36 +49,43 @@ def make_fits(name_cn2, name_ws, Cn2, Ws, alt, path='/scratchm/eklotz/calcul_cou
 # %%
 
 
-def coupled_flux(data, date: str, params={'fech': 4.7e3, 'ttot': 1, 'delay': 2, 'dpup': 0.6, 'nmax': 12.0, 'nrad': 30.0, seed: 10, 'delay': 2},  
-                 path='/scratchm/eklotz/calcul_coupled_flux/Params/tmp/', default='/scratchm/eklotz/calcul_coupled_flux/Params/param_geo_oa_60cm.txt', logging = 'error.log'):
+def coupled_flux(data, date: str, params={'fech': 4.7e3, 'ttot': 1, 'delay': 2, 'dpup': 0.6, 'nmax': 12.0, 'nrad': 30.0, 'seed': 10, 'delay': 2},  
+                 path='/scratchm/eklotz/calcul_coupled_flux/Params/tmp/', default='/scratchm/eklotz/calcul_coupled_flux/Params/param_geo_oa_60cm.txt', logFile = 'error.log'):
     
-    logging.basicConfig(filename='error.log')
+    logging.basicConfig(filename=logFile)
+      
     ndate = date.replace(" ", "_")
     ndate = ndate.replace("-", "_")
     ndate = ndate.strip(':00:00')
     name_cn2 = ndate + '_Cn2'
     name_ws = ndate + '_wspeed'
-    write_params(ndate, name_cn2, name_ws, path, default)
+    
+        
+    dir = path +ndate +'/'
+    os.mkdir(dir)
+    
+    write_params(ndate, name_cn2, name_ws, path = dir, default= default)
     tmp = data[date]
     Cn2 = tmp.Cn2.values
     alt = tmp.alt.values
     WS = tmp.wspeed.values
-    make_fits(name_cn2, name_ws, Cn2, WS, alt, path)
+    make_fits(name_cn2, name_ws, Cn2, WS, alt, path = dir)
 
     from idlpy import IDL
     IDL.run('.COMPILE -v /scratchm/eklotz/calcul_coupled_flux/SAOST_EK/open_param_turandot_ek.pro')
     IDL.run(
         '.COMPILE -v /scratchm/eklotz/calcul_coupled_flux/SAOST_EK/gen_profils_leo_ek.pro')
     IDL.run('.COMPILE -v /scratchm/eklotz/calcul_coupled_flux/SAOST_EK/simu_oa_simplifiee_ek.pro')
-    IDL.dpup = 0.6
-    IDL.nmax = 12.0
+    
+    for key in params : 
+        IDL.run(f'{key} = {params[key]} ')
+
     IDL.run('tnmax = indgen(nmax)+1.')
-    IDL.nrad = 30.0
     IDL.run('nmodes = round((nrad*(nrad+3))/2+1)')
-    os.mkdir(path + str(i)+'/')
-    IDL.dir = path + str(i)+'/'
+    IDL.run('nocc = fech*ttot')
+    IDL.dir = path +ndate +'/'
     IDL.file_param = '/scratchm/eklotz/calcul_coupled_flux/Params/tmp/' + ndate + '.txt'
-    cmd = 'results = simu_oa_simplifiee_ab2(file_param = file_param, nmax = nmax, fech = 4.7e3,  nmodes = nmodes, nocc = 4700, ttot = 1., delay = 2, seed = seed, dir = dir, fast = 0, tempo = 1)'
+    cmd = 'results = simu_oa_simplifiee_ab2(file_param = file_param, nmax = nmax, fech = fech,  nmodes = nmodes, nocc = nocc, ttot = ttot, delay = delay, seed = seed, dir = dir, fast = 0, tempo = 1)'
     try:
         logging.info(f'{date} done')
         IDL.run(cmd)
@@ -87,7 +94,23 @@ def coupled_flux(data, date: str, params={'fech': 4.7e3, 'ttot': 1, 'delay': 2, 
         df = pd.DataFrame(res['FC'], columns=['FC'])
         df['date'] = date
         logging.info(f'Ok pour {date}')
+        shutil.rmtree(dir)
         return df
 
     except:
+        shutil.rmtree(dir)
         logging.error(f' Erreur rencontrée pour {date}')
+
+def get_all_coupled_flux(data, nbCores, params={'fech': 4.7e3, 'ttot': 1, 'delay': 2, 'dpup': 0.6, 'nmax': 12.0, 'nrad': 30.0, 'seed': 10, 'delay': 2},  
+                 path='/scratchm/eklotz/calcul_coupled_flux/Params/tmp/', default='/scratchm/eklotz/calcul_coupled_flux/Params/param_geo_oa_60cm.txt', logFile = 'error.log'):
+    
+    def foo(i): coupled_flux(data, i, params=params, path=path, default=default, logFile = logFile)
+    dates = data.dates
+    print('0K')
+    with Pool(nbCores) as P : 
+        res = P.map(foo, list(dates))
+        
+    res = pd.concat(res)
+    
+    return res
+    
