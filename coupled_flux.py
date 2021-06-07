@@ -1,8 +1,7 @@
 # %%
 from astropy.io import fits
 
-from .Cn2 import *
-from numpy import *
+from .Cn2 import Cn2
 from tqdm import tqdm
 import pandas as pd
 from multiprocessing import Pool
@@ -13,7 +12,8 @@ from shutil import copyfile
 from time import time, time_ns
 import re
 import logging
-import glob
+import numpy as np
+
 # %%
 
 
@@ -36,8 +36,8 @@ def write_params(name_txt, name_cn2, name_ws,  path='/scratchm/eklotz/calcul_cou
 
 def make_fits(name_cn2, name_ws, Cn2, Ws, alt, path='/scratchm/eklotz/calcul_coupled_flux/Params/tmp/'):
     dz = alt[1:]-alt[:-1]
-    profil_Cn2 = array([alt[:-1], Cn2[:-1]*dz])
-    profil_ws = array([alt[:-1], Ws[:-1]])
+    profil_Cn2 = np.array([alt[:-1], Cn2[:-1]*dz])
+    profil_ws = np.array([alt[:-1], Ws[:-1]])
     hdu_Cn2 = fits.PrimaryHDU(profil_Cn2)
     hdu_Cn2 = fits.HDUList([hdu_Cn2])
     hdu_Cn2.writeto(path + name_cn2 + '.fits', overwrite=1)
@@ -84,7 +84,7 @@ def coupled_flux(data, date: str, params={'fech': 4.7e3, 'ttot': 1, 'delay': 2, 
     IDL.run('nmodes = round((nrad*(nrad+3))/2+1)')
     IDL.run('nocc = fech*ttot')
     IDL.dir = path +ndate +'/'
-    IDL.file_param = '/scratchm/eklotz/calcul_coupled_flux/Params/tmp/' + ndate + '.txt'
+    IDL.file_param = dir + ndate + '.txt'
     cmd = 'results = simu_oa_simplifiee_ab2(file_param = file_param, nmax = nmax, fech = fech,  nmodes = nmodes, nocc = nocc, ttot = ttot, delay = delay, seed = seed, dir = dir, fast = 0, tempo = 1)'
     try:
         logging.info(f'{date} done')
@@ -94,17 +94,19 @@ def coupled_flux(data, date: str, params={'fech': 4.7e3, 'ttot': 1, 'delay': 2, 
         df = pd.DataFrame(res['FC'], columns=['FC'])
         df['date'] = date
         logging.info(f'Ok pour {date}')
-        shutil.rmtree(dir)
+        #shutil.rmtree(dir)
         return df
 
     except:
-        shutil.rmtree(dir)
+        #shutil.rmtree(dir)
+        print(f' Erreur rencontrée pour {date}')
         logging.error(f' Erreur rencontrée pour {date}')
 
 def get_all_coupled_flux(data, nbCores, params={'fech': 4.7e3, 'ttot': 1, 'delay': 2, 'dpup': 0.6, 'nmax': 12.0, 'nrad': 30.0, 'seed': 10, 'delay': 2},  
                  path='/scratchm/eklotz/calcul_coupled_flux/Params/tmp/', default='/scratchm/eklotz/calcul_coupled_flux/Params/param_geo_oa_60cm.txt', logFile = 'error.log'):
     
-    def foo(i): coupled_flux(data, i, params=params, path=path, default=default, logFile = logFile)
+    def foo(i): return coupled_flux(data, i, params=params, path=path, default=default, logFile = logFile)
+    
     dates = data.dates
     print('0K')
     with Pool(nbCores) as P : 
@@ -114,3 +116,4 @@ def get_all_coupled_flux(data, nbCores, params={'fech': 4.7e3, 'ttot': 1, 'delay
     
     return res
     
+# %%

@@ -4,7 +4,7 @@ from scipy.io import loadmat as load
 
 def calc_power_margin(ROP_dw_dBm_init, time, Req_MI, InterleavingTime = 50*1e-3, step_power_margin_dB = 0.1):
     
-    tmp = load('/scratchm/eklotz/calcul_coupled_flux/Library/perfo/IM_10Gbps_DPSK_EDFA_PIN_SOFT.mat')          
+    tmp = load('/scratchm/eklotz/Lib/CAQTUS/perfo/IM_10Gbps_DPSK_EDFA_PIN_SOFT.mat')          
     # donne la correspondance entre la puissance injectée en entrée du LNOA et l'information mutuelle par paquet FEC
     ROP_MI = tmp['ROP_MI'].T[0]
     meanIM = tmp['meanIM'].T[0]

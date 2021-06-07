@@ -1,2 +1,1 @@
-from .Eigen_values import * 
-from .Legendre import *
+from .Legendre import interp_gauss_legendre, interp_gauss_legendre_pp
