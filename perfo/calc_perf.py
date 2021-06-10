@@ -4,7 +4,7 @@ from scipy.io import loadmat as load
 
 def calc_power_margin(ROP_dw_dBm_init, time, Req_MI, InterleavingTime = 50*1e-3, step_power_margin_dB = 0.1):
     
-    tmp = load('/scratchm/eklotz/Lib/CAQTUS/perfo/IM_10Gbps_DPSK_EDFA_PIN_SOFT.mat')          
+    tmp = load('/scratchm/eklotz/Lib/CACTUS/perfo/IM_10Gbps_DPSK_EDFA_PIN_SOFT.mat')          
     # donne la correspondance entre la puissance injectée en entrée du LNOA et l'information mutuelle par paquet FEC
     ROP_MI = tmp['ROP_MI'].T[0]
     meanIM = tmp['meanIM'].T[0]
@@ -61,6 +61,7 @@ def calc_power_margin(ROP_dw_dBm_init, time, Req_MI, InterleavingTime = 50*1e-3,
 
 
 def get_limit_power(TC, time, Req_MI, init = (-36.3, -80,4), InterleavingTime = 50*1e-3, step_power_margin_dB = 0.1) :
+    
     TC_dB = 10*np.log10(TC)
     sup = init[0]
     inf = init[1]
@@ -78,5 +79,20 @@ def get_limit_power(TC, time, Req_MI, init = (-36.3, -80,4), InterleavingTime = 
         if sup - inf <= step_power_margin_dB : 
             return sup
         
+    
+    
+def get_limit_power_no_IL(TC, time, Req_MI):
+    TC_dB = 10*np.log10(TC)
+    tmp = load('/scratchm/eklotz/Lib/CACTUS/perfo/IM_10Gbps_DPSK_EDFA_PIN_SOFT.mat')          
+    # donne la correspondance entre la puissance injectée en entrée du LNOA et l'information mutuelle par paquet FEC
+    ROP_MI = tmp['ROP_MI'].T[0]
+    meanIM = tmp['meanIM'].T[0]
+
+    
+    diff = (meanIM-Req_MI)
+    valid_idx = np.where(diff>=0)[0]
+    idx = valid_idx[(diff[valid_idx]).argmin()]
+    
+    return ROP_MI[idx]-min(TC_dB)
     
     

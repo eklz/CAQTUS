@@ -12,6 +12,7 @@ from shutil import copyfile
 from time import time, time_ns
 import re
 import logging
+from time import sleep
 import numpy as np
 
 # %%
@@ -20,7 +21,8 @@ import numpy as np
 def write_params(name_txt, name_cn2, name_ws,  path='/scratchm/eklotz/calcul_coupled_flux/Params/tmp/', default='/scratchm/eklotz/calcul_coupled_flux/Params/param_geo_oa_60cm.txt'):
 
     dest = path + name_txt + '.txt'
-
+    if os.path.exists(dest):
+        os.remove(dest)
     copyfile(default, dest)
 
     with open(dest, 'r+') as f:
@@ -62,6 +64,10 @@ def coupled_flux(data, date: str, params={'fech': 4.7e3, 'ttot': 1, 'delay': 2, 
     
         
     dir = path +ndate +'/'
+    if os.path.exists(dir):
+        shutil.rmtree(dir)
+        sleep(1)
+        
     os.mkdir(dir)
     
     write_params(ndate, name_cn2, name_ws, path = dir, default= default)
