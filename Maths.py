@@ -1,10 +1,15 @@
 import numpy as np
-from scipy.integrate import simps
 from scipy.ndimage import gaussian_filter1d
 
 def calc_moments(Cn2, alt, windSpeed, lambda_m = 1.55e-6, zenithAngle = 0, 
                  fried = True, seeing = True, isoplanatic = True, coherenceTime = True, rmzeros = True):
     
+    def int(x,t):
+        x = np.array(x)
+        t = np.array(t)
+        dt = t[1:]-t[:-1]
+        return np.sum(x[:-1]*dt)
+
     if rmzeros : 
         nzeros = Cn2.nonzero()[0]
         Cn2 = Cn2[nzeros]
@@ -12,7 +17,7 @@ def calc_moments(Cn2, alt, windSpeed, lambda_m = 1.55e-6, zenithAngle = 0,
         windSpeed = windSpeed[nzeros]
 
     r0 = np.power((0.423*np.cos(zenithAngle)**(-1)*
-                   (2*np.pi/lambda_m)**2*simps(Cn2, alt)), (-3/5))
+                   (2*np.pi/lambda_m)**2*int(Cn2, alt)), (-3/5))
     
     res = {}
 
@@ -25,12 +30,12 @@ def calc_moments(Cn2, alt, windSpeed, lambda_m = 1.55e-6, zenithAngle = 0,
     if isoplanatic:
         res['theta0'] = np.power((2.914*(2*np.pi/lambda_m)**2 *
                                   np.cos(zenithAngle)**(-8/3) *
-                                  simps(Cn2*np.power(alt, (5/3)), alt)), (-3/5))*1e6
+                                  int(Cn2*np.power(alt, (5/3)), alt)), (-3/5))*1e6
 
     if coherenceTime:
         res['tau0'] = np.power((2.914*(2*np.pi/lambda_m)**2 *
                                 np.cos(zenithAngle)**(-8/3) *
-                                simps(Cn2*np.power(windSpeed, (5/3)), alt)), (-3/5))
+                                int(Cn2*np.power(windSpeed, (5/3)), alt)), (-3/5))
 
     return res
 

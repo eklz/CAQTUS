@@ -12,6 +12,7 @@ from .Maths import *
 from .Masciadri import *
 from .decimation import *
 
+import swifter 
 
 
 class Cn2:
