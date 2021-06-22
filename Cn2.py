@@ -94,11 +94,13 @@ class Cn2:
         df = df.drop(columns=['level_1'])
         return Cn2(df,date="date", alt="alt", Cn2="Cn2", wspeed="wspeed")
 
+
     def moments(self, lambda_m = 1.55e-6, zenithAngle = 0):
         f = (lambda x : calc_moments(x[self.columns.Cn2].values, x[self.columns.alt].values, x[self.columns.wspeed].values,
                                     lambda_m = lambda_m, zenithAngle = zenithAngle))
         res = self._data.groupby(self.columns.date, sort = False, dropna=False).apply(lambda x : pd.Series(f(x)))
         return res
+
     
     def set_ground_level(self, value = None, inplace =True):
         if not value:
@@ -116,6 +118,7 @@ class Cn2:
             copy = self._data.copy()
             copy[self.columns.alt] = _alt
             return Cn2(copy, **self.columns._asdict())
+
                         
     def rm_zeros(self, inplace = True):
         
@@ -124,7 +127,23 @@ class Cn2:
             self._data = self._data[nnzeros]
         else : 
             return Cn2(self._data[nnzeros], **self.columns._asdict())
+
         
+    def change_elevation(self, theta, inplace = True):
+        """Changer l'élévation du profil en modifiant l'écart entre les valeurs de alt
+
+        Args:
+            theta ([int]): angle d'élévation en radians
+        """            
+        
+        sin = np.sin(theta)
+        if inplace : 
+            self.data.alt = self._data.alt.apply(lambda x : x/np.sin(theta))
+        else : 
+            copy = self._data.copy()
+            self.copy.alt = self._data.copy.apply(lambda x : x/np.sin(theta))
+            return Cn2(copy, **self.columns._asdict())
+
         
     def to_csv(self, path):
         """Write the Cn2 object to a CSV file
@@ -133,7 +152,6 @@ class Cn2:
             path (str): Path of the CSV file to write, if file already exist it is being overwrite. 
         """
         self._data.to_csv(path, index = False)
-        
         
     @classmethod
     def read_csv(cls, path, date="date", alt="alt", Cn2="Cn2", wspeed="wspeed", **kwargs):
