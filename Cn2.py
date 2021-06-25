@@ -1,6 +1,7 @@
 # %%
 import numpy as np
 import pandas as pd
+from collections.abc import Iterable
 #import seaborn as sns
 from collections import namedtuple
 from tqdm import tqdm
@@ -69,7 +70,27 @@ class Cn2:
             copy[col] = _filtered
             return Cn2(copy, **self.columns._asdict())
 
+    def rm_incomplete(self, alt_min, verb = 1, inplace = True):
+        """Remove all profiles that don't have values after at least alt_min
 
+        Args:
+            alt_min (int)
+        """
+
+        invalid = abs((self._data.groupby('date').apply(lambda x : np.max(x.alt.values))>=alt_min)-1)
+        invalid_date = invalid[invalid == 1].index.values
+        res = self._data.loc[~self._data.date.isin(invalid_date)]
+        
+        if verb : 
+            print(f'{len(invalid_date)} dates invalides sur {len(self.dates)}')
+            print(invalid_date)
+        
+        if inplace:
+            self._data = res
+            self.dates = np.unique(self._data[self.columns.date])
+        else:
+            return Cn2(res, **self.columns._asdict())
+               
     def decimate(self, nbsegments, nbpoints_per_segment):
         
         if nbsegments >1 : 
@@ -263,6 +284,12 @@ class Cn2:
                 return Cn2(self._data[self._data[self.columns.date].isin(self.dates[name])], **self.columns._asdict())
             except:
                 raise IndexError(f'Index out of range {len(self.dates)}')
+            
+        if isinstance(name, Iterable):
+            try:
+                return Cn2(self._data[self._data[self.columns.date].isin(self.dates[name])], **self.columns._asdict())
+            except:
+                raise IndexError(f'Index out of range {len(self.dates)}')
 
         if name in self.dates:  # If a date is given then we return the date
             return Cn2(self._data[self._data[self.columns.date] == name], **self.columns._asdict())
@@ -276,6 +303,9 @@ class Cn2:
                 raise AttributeError
         pass
 
+    def __add__(self, other):
+        data = pd.concat([self._data, other._data], axis = 0)
+        return Cn2(data, **self.columns._asdict())
 
     def __len__(self):  # return the number of profiles (len(dates))
         return len(self.dates)
