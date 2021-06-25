@@ -96,10 +96,12 @@ def Lagrange(i, roots):
     return L
 
 
-def interp_gauss_legendre(n, t, y, norm=False):
+def interp_gauss_legendre(n, t, y, norm=True, log = True):
     res = []
     min = np.min(t)
     max = np.max(t)
+    if log : 
+        y = np.log10(y)
     if norm:
         t = (t-min)/(max-min)
 
@@ -117,7 +119,9 @@ def interp_gauss_legendre(n, t, y, norm=False):
 
     if norm:
         roots = roots*(max-min) + min
-
+    if log : 
+        res = np.array([10**i for i in res])
+    
     return roots, res
 
 
