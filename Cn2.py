@@ -1,9 +1,11 @@
 # %%
 import numpy as np
 import pandas as pd
+# %%
 from collections.abc import Iterable
 #import seaborn as sns
 from collections import namedtuple
+from scipy.integrate._ivp.radau import T
 from tqdm import tqdm
 import warnings
 from scipy.interpolate import interp1d
@@ -91,12 +93,12 @@ class Cn2:
         else:
             return Cn2(res, **self.columns._asdict())
                
-    def decimate(self, nbsegments, nbpoints_per_segment):
+    def decimate(self, nbsegments, nbpoints_per_segment, log = True):
         
         if nbsegments >1 : 
             def foo(x):
                 try : 
-                    roots, res = interp_gauss_legendre_pp(nbpoints_per_segment, np.array_split(x[self.columns.alt].values, nbsegments), np.array_split(x[self.columns.Cn2].values, nbsegments))
+                    roots, res = interp_gauss_legendre_pp(nbpoints_per_segment, np.array_split(x[self.columns.alt].values, nbsegments), np.array_split(x[self.columns.Cn2].values, nbsegments), norm = True)
                     f = interp1d(x.alt.values, x.wspeed.values)
                     return pd.DataFrame(np.transpose([roots, res, f(roots)]), columns=[self.columns.alt, self.columns.Cn2, self.columns.wspeed])
                 except : 
@@ -157,12 +159,11 @@ class Cn2:
             theta ([int]): angle d'élévation en radians
         """            
         
-        sin = np.sin(theta)
         if inplace : 
-            self.data.alt = self._data.alt.apply(lambda x : x/np.sin(theta))
+            self._data.alt = self._data.alt.apply(lambda x : x/np.sin(theta))
         else : 
             copy = self._data.copy()
-            self.copy.alt = self._data.copy.apply(lambda x : x/np.sin(theta))
+            copy.alt = copy.alt.apply(lambda x : x/np.sin(theta))
             return Cn2(copy, **self.columns._asdict())
 
         
@@ -285,12 +286,6 @@ class Cn2:
             except:
                 raise IndexError(f'Index out of range {len(self.dates)}')
             
-        if isinstance(name, Iterable):
-            try:
-                return Cn2(self._data[self._data[self.columns.date].isin(self.dates[name])], **self.columns._asdict())
-            except:
-                raise IndexError(f'Index out of range {len(self.dates)}')
-
         if name in self.dates:  # If a date is given then we return the date
             return Cn2(self._data[self._data[self.columns.date] == name], **self.columns._asdict())
 
@@ -301,6 +296,14 @@ class Cn2:
                 return self._data[getattr(self.columns, name)]
             except AttributeError:
                 raise AttributeError
+        
+        if isinstance(name, Iterable):
+            try:
+                return Cn2(self._data[self._data[self.columns.date].isin(self.dates[name])], **self.columns._asdict())
+            except:
+                raise IndexError(f'Index out of range {len(self.dates)}')
+
+        
         pass
 
     def __add__(self, other):

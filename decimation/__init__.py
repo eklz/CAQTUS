@@ -1,1 +1,1 @@
-from .Legendre import interp_gauss_legendre, interp_gauss_legendre_pp
+from .Legendre import *

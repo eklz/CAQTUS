@@ -96,12 +96,11 @@ def Lagrange(i, roots):
     return L
 
 
-def interp_gauss_legendre(n, t, y, norm=True, log = True):
+def interp_gauss_legendre(n, t, y, norm=True):
     res = []
     min = np.min(t)
     max = np.max(t)
-    if log : 
-        y = np.log10(y)
+
     if norm:
         t = (t-min)/(max-min)
 
@@ -119,20 +118,18 @@ def interp_gauss_legendre(n, t, y, norm=True, log = True):
 
     if norm:
         roots = roots*(max-min) + min
-    if log : 
-        res = np.array([10**i for i in res])
     
     return roots, res
 
 
-def interp_gauss_legendre_pp(n, lt, ly):
+def interp_gauss_legendre_pp(n, lt, ly, norm=True, log = True):
     roots, res = [], []
     if len(lt) != len(ly):
         raise AttributeError('lt and ly must have the same length')
     for i in range(len(lt)):
         t = lt[i]
         y = ly[i]
-        X, Y = interp_gauss_legendre(n, t, y, norm=True)
+        X, Y = interp_gauss_legendre(n, t, y, norm=norm)
         roots = np.concatenate((roots, X))
         res = np.concatenate((res, Y))
 
